@@ -48,3 +48,25 @@ __logo__ = """
     /[_]\  [~]\/    |//  |
      ] [   OOO      /o|__|
 """
+
+
+def load_controller_config(default_controller=None, custom_fpath=None):
+    """Backward-compatible API for robosuite<=1.4 callers.
+
+    Older stacks (e.g. LIBERO) expect this function to return a controller
+    config directly usable by env creation. In robosuite>=1.5, envs expect
+    *composite* controller configs.
+    """
+    part_cfg = load_part_controller_config(
+        default_controller=default_controller, custom_fpath=custom_fpath
+    )
+    # Convert legacy single-arm part config -> robosuite>=1.5 composite format.
+    return {
+        "type": "BASIC",
+        "body_parts": {
+            "right": {
+                **part_cfg,
+                "gripper": {"type": "GRIP"},
+            }
+        },
+    }
