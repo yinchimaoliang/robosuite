@@ -25,6 +25,8 @@ class FixedBaseRobot(Robot):
         gripper_type="default",
         control_freq=20,
         lite_physics=True,
+        legacy_gripper_action=False,
+        legacy_gripper_speed=0.01,
     ):
         super().__init__(
             robot_type=robot_type,
@@ -36,6 +38,8 @@ class FixedBaseRobot(Robot):
             gripper_type=gripper_type,
             control_freq=control_freq,
             lite_physics=lite_physics,
+            legacy_gripper_action=legacy_gripper_action,
+            legacy_gripper_speed=legacy_gripper_speed,
         )
 
     def _load_controller(self):
@@ -143,7 +147,10 @@ class FixedBaseRobot(Robot):
 
         self.composite_controller.update_state()
         if policy_step:
-            self.composite_controller.set_goal(action)
+            if self.legacy_gripper_action:
+                self._set_composite_goal_without_grippers(action)
+            else:
+                self.composite_controller.set_goal(action)
 
         applied_action_dict = self.composite_controller.run_controller(self._enabled_parts)
         for part_name, applied_action in applied_action_dict.items():
@@ -151,6 +158,8 @@ class FixedBaseRobot(Robot):
             applied_action_high = self.sim.model.actuator_ctrlrange[self._ref_actuators_indexes_dict[part_name], 1]
             applied_action = np.clip(applied_action, applied_action_low, applied_action_high)
             self.sim.data.ctrl[self._ref_actuators_indexes_dict[part_name]] = applied_action
+        if self.legacy_gripper_action:
+            self._apply_legacy_gripper_action(action)
 
         if policy_step:
             # Update proprioceptive values
@@ -187,6 +196,42 @@ class FixedBaseRobot(Robot):
         observables = super().setup_observables()
 
         return observables
+
+    def _set_composite_goal_without_grippers(self, action):
+        """Set arm goals while leaving grippers to legacy substep control."""
+        for part_name, controller in self.composite_controller.part_controllers.items():
+            if part_name in self.composite_controller.grippers:
+                continue
+            start_idx, end_idx = self.composite_controller._action_split_indexes[part_name]
+            controller.set_goal(action[start_idx:end_idx])
+
+    def _apply_legacy_gripper_action(self, action):
+        """Emulate robosuite<=1.4 SingleArm.grip_action semantics."""
+        for arm in self.arms:
+            if not self.has_gripper[arm]:
+                continue
+            gripper_name = self.get_gripper_name(arm)
+            if gripper_name not in self.composite_controller._action_split_indexes:
+                continue
+            start_idx, end_idx = self.composite_controller._action_split_indexes[gripper_name]
+            gripper_action = action[start_idx:end_idx]
+            gripper = self.gripper[arm]
+            if self.legacy_gripper_speed is None:
+                gripper_action_actual = gripper.format_action(gripper_action)
+            else:
+                gripper.current_action = np.clip(
+                    gripper.current_action
+                    + np.array([-1.0, 1.0]) * self.legacy_gripper_speed * np.sign(gripper_action),
+                    -1.0,
+                    1.0,
+                )
+                gripper_action_actual = gripper.current_action
+
+            actuator_idxs = self._ref_joint_gripper_actuator_indexes[arm]
+            ctrl_range = self.sim.model.actuator_ctrlrange[actuator_idxs]
+            bias = 0.5 * (ctrl_range[:, 1] + ctrl_range[:, 0])
+            weight = 0.5 * (ctrl_range[:, 1] - ctrl_range[:, 0])
+            self.sim.data.ctrl[actuator_idxs] = bias + weight * gripper_action_actual
 
     @property
     def action_limits(self):

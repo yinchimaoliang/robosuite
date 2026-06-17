@@ -136,6 +136,8 @@ class RobotEnv(MujocoEnv):
         render_gpu_device_id=-1,
         control_freq=20,
         lite_physics=True,
+        legacy_gripper_action=False,
+        legacy_gripper_speed=0.01,
         horizon=1000,
         ignore_done=False,
         hard_reset=True,
@@ -203,19 +205,19 @@ class RobotEnv(MujocoEnv):
         # Robot configurations -- update from subclass configs
         if robot_configs is None:
             robot_configs = [{} for _ in range(self.num_robots)]
-        self.robot_configs = [
-            dict(
-                **{
-                    "composite_controller_config": controller_configs[idx],
-                    "base_type": base_types[idx],
-                    "initialization_noise": initialization_noise[idx],
-                    "control_freq": control_freq,
-                    "lite_physics": lite_physics,
-                },
-                **robot_config,
-            )
-            for idx, robot_config in enumerate(robot_configs)
-        ]
+        self.robot_configs = []
+        for idx, robot_config in enumerate(robot_configs):
+            config = {
+                "composite_controller_config": controller_configs[idx],
+                "base_type": base_types[idx],
+                "initialization_noise": initialization_noise[idx],
+                "control_freq": control_freq,
+                "lite_physics": lite_physics,
+                "legacy_gripper_action": legacy_gripper_action,
+                "legacy_gripper_speed": legacy_gripper_speed,
+            }
+            config.update(robot_config)
+            self.robot_configs.append(config)
 
         # Run superclass init
         super().__init__(

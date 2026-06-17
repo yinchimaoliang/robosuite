@@ -141,6 +141,8 @@ class ManipulationEnv(RobotEnv):
         render_gpu_device_id=-1,
         control_freq=20,
         lite_physics=True,
+        legacy_gripper_action=False,
+        legacy_gripper_speed=0.01,
         horizon=1000,
         ignore_done=False,
         hard_reset=True,
@@ -164,6 +166,8 @@ class ManipulationEnv(RobotEnv):
         robot_configs = [
             {
                 "gripper_type": gripper_types[idx],
+                "legacy_gripper_action": legacy_gripper_action,
+                "legacy_gripper_speed": legacy_gripper_speed,
             }
             for idx in range(num_robots)
         ]
@@ -184,6 +188,8 @@ class ManipulationEnv(RobotEnv):
             render_gpu_device_id=render_gpu_device_id,
             control_freq=control_freq,
             lite_physics=lite_physics,
+            legacy_gripper_action=legacy_gripper_action,
+            legacy_gripper_speed=legacy_gripper_speed,
             horizon=horizon,
             ignore_done=ignore_done,
             hard_reset=hard_reset,

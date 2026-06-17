@@ -49,6 +49,8 @@ class SingleArmEnv(ManipulationEnv):
 
         # Keep legacy behavior (pre-1.5 physics stepping) unless overridden.
         lite_physics = kwargs.pop("lite_physics", False)
+        legacy_gripper_action = kwargs.pop("legacy_gripper_action", True)
+        legacy_gripper_speed = kwargs.pop("legacy_gripper_speed", 0.01)
 
         super().__init__(
             robots=robots,
@@ -66,6 +68,8 @@ class SingleArmEnv(ManipulationEnv):
             render_gpu_device_id=render_gpu_device_id,
             control_freq=control_freq,
             lite_physics=lite_physics,
+            legacy_gripper_action=legacy_gripper_action,
+            legacy_gripper_speed=legacy_gripper_speed,
             horizon=horizon,
             ignore_done=ignore_done,
             hard_reset=hard_reset,

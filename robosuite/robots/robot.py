@@ -62,6 +62,8 @@ class Robot(object):
         gripper_type="default",
         control_freq=20,
         lite_physics=True,
+        legacy_gripper_action=False,
+        legacy_gripper_speed=0.01,
     ):
         self.arms = REGISTERED_ROBOTS[robot_type].arms
 
@@ -101,6 +103,8 @@ class Robot(object):
         self.robot_model = None  # object holding robot model-specific info
         self.control_freq = control_freq  # controller Hz
         self.lite_physics = lite_physics
+        self.legacy_gripper_action = legacy_gripper_action
+        self.legacy_gripper_speed = legacy_gripper_speed
         self.base_type = base_type  # Type of robot base to use
 
         # Scaling of Gaussian initial noise applied to robot joints
@@ -874,6 +878,8 @@ class Robot(object):
             self.part_controller_config[arm]["ndim"] = self._joint_split_idx
             self.part_controller_config[arm]["policy_freq"] = self.control_freq
             self.part_controller_config[arm]["lite_physics"] = self.lite_physics
+            if self.legacy_gripper_action:
+                self.part_controller_config[arm]["legacy_keep_zero_ori_goal"] = True
             (start, end) = (None, self._joint_split_idx) if arm == "right" else (self._joint_split_idx, None)
             self.part_controller_config[arm]["joint_indexes"] = {
                 "joints": self.arm_joint_indexes[start:end],

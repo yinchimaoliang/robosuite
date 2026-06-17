@@ -221,6 +221,7 @@ class OperationalSpaceController(Controller):
         # initialize origin pos and ori
         self.origin_pos = None
         self.origin_ori = None
+        self.legacy_keep_zero_ori_goal = kwargs.get("legacy_keep_zero_ori_goal", False)
 
     def set_goal(self, action):
         """
@@ -257,7 +258,13 @@ class OperationalSpaceController(Controller):
             scaled_delta = self.scale_action(delta)
             self.goal_pos = self.compute_goal_pos(scaled_delta[0:3])
             if self.use_ori is True:
-                self.goal_ori = self.compute_goal_ori(scaled_delta[3:6])
+                keep_legacy_ori_goal = (
+                    self.legacy_keep_zero_ori_goal
+                    and self.goal_ori is not None
+                    and np.allclose(scaled_delta[3:6], 0.0)
+                )
+                if not keep_legacy_ori_goal:
+                    self.goal_ori = self.compute_goal_ori(scaled_delta[3:6])
             else:
                 self.goal_ori = self.compute_goal_ori(np.zeros(3))
         # Else, interpret actions as absolute values
