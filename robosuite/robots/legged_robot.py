@@ -30,6 +30,8 @@ class LeggedRobot(MobileRobot):
         gripper_type="default",
         control_freq=20,
         lite_physics=True,
+        legacy_gripper_action=False,
+        legacy_gripper_speed=0.01,
     ):
         super().__init__(
             robot_type=robot_type,
@@ -41,6 +43,8 @@ class LeggedRobot(MobileRobot):
             gripper_type=gripper_type,
             control_freq=control_freq,
             lite_physics=lite_physics,
+            legacy_gripper_action=legacy_gripper_action,
+            legacy_gripper_speed=legacy_gripper_speed,
         )
 
     def _load_leg_controllers(self):

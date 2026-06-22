@@ -606,26 +606,71 @@ class MujocoXMLObject(MujocoObject, MujocoXML):
 
     @property
     def bottom_offset(self):
-        bottom_site = self.worldbody.find("./body/site[@name='{}bottom_site']".format(self.naming_prefix))
-        return string_to_array(bottom_site.get("pos"))
+        bottom_site = self._get_site_pos("bottom_site")
+        if bottom_site is not None:
+            return bottom_site
+        reg_bbox = self._get_reg_bbox_pos_size()
+        if reg_bbox is None:
+            raise AttributeError("Object XML is missing bottom_site and reg_bbox")
+        pos, size = reg_bbox
+        return np.array([pos[0], pos[1], pos[2] - size[2]])
 
     @property
     def top_offset(self):
-        top_site = self.worldbody.find("./body/site[@name='{}top_site']".format(self.naming_prefix))
-        return string_to_array(top_site.get("pos"))
+        top_site = self._get_site_pos("top_site")
+        if top_site is not None:
+            return top_site
+        reg_bbox = self._get_reg_bbox_pos_size()
+        if reg_bbox is None:
+            raise AttributeError("Object XML is missing top_site and reg_bbox")
+        pos, size = reg_bbox
+        return np.array([pos[0], pos[1], pos[2] + size[2]])
 
     @property
     def horizontal_radius(self):
-        horizontal_radius_site = self.worldbody.find(
-            "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
-        )
-        return string_to_array(horizontal_radius_site.get("pos"))[0]
+        horizontal_radius_site = self._get_site_pos("horizontal_radius_site")
+        if horizontal_radius_site is not None:
+            return horizontal_radius_site[0]
+        reg_bbox = self._get_reg_bbox_pos_size()
+        if reg_bbox is None:
+            raise AttributeError("Object XML is missing horizontal_radius_site and reg_bbox")
+        _, size = reg_bbox
+        return size[0]
 
     def get_bounding_box_half_size(self):
-        horizontal_radius_site = self.worldbody.find(
-            "./body/site[@name='{}horizontal_radius_site']".format(self.naming_prefix)
-        )
-        return string_to_array(horizontal_radius_site.get("pos")) - self.bottom_offset
+        horizontal_radius_site = self._get_site_pos("horizontal_radius_site")
+        if horizontal_radius_site is not None:
+            return horizontal_radius_site - self.bottom_offset
+        reg_bbox = self._get_reg_bbox_pos_size()
+        if reg_bbox is None:
+            raise AttributeError("Object XML is missing horizontal_radius_site and reg_bbox")
+        _, size = reg_bbox
+        return size
+
+    def _get_site_pos(self, site_name):
+        prefixed_site_name = "{}{}".format(self.naming_prefix, site_name)
+        for path in (
+            "./body/site[@name='{}']",
+            ".//site[@name='{}']",
+        ):
+            site = self.worldbody.find(path.format(prefixed_site_name))
+            if site is not None:
+                return string_to_array(site.get("pos"))
+        return None
+
+    def _get_reg_bbox_pos_size(self):
+        prefixed_bbox_name = "{}reg_bbox".format(self.naming_prefix)
+        for bbox_name in (prefixed_bbox_name, "reg_bbox"):
+            reg_bbox = self.worldbody.find(".//geom[@name='{}']".format(bbox_name))
+            if reg_bbox is not None:
+                break
+        else:
+            return None
+        if reg_bbox.get("size") is None:
+            return None
+        pos = string_to_array(reg_bbox.get("pos", "0 0 0"))
+        size = string_to_array(reg_bbox.get("size"))
+        return pos, size
 
     def _get_elements_by_name(self, geom_names, body_names=None, joint_names=None):
         """
